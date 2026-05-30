@@ -42,7 +42,7 @@ check_docker() {
 
 # Verificar Docker Compose
 check_docker_compose() {
-    if ! command -v docker-compose &> /dev/null; then
+    if ! command -v docker compose &> /dev/null; then
         print_error "Docker Compose no está instalado"
         exit 1
     fi
@@ -58,30 +58,32 @@ create_logs_dir() {
 # Build de servicios
 build_services() {
     print_header "Construyendo servicios Docker..."
-    docker-compose -f "$SCRIPT_DIR/docker-compose.yml" build
+    docker compose -f "$SCRIPT_DIR/docker-compose.yml" build
     print_success "Servicios construidos"
 }
 
 # Iniciar servicios
 start_services() {
     print_header "Iniciando servicios..."
-    docker-compose -f "$SCRIPT_DIR/docker-compose.yml" up -d
+    docker compose -f "$SCRIPT_DIR/docker-compose.yml" up -d
     print_success "Servicios iniciados"
     
-    sleep 10
+    sleep 15
     
     print_info "Esperando a que Ollama esté disponible..."
-    for i in {1..30}; do
-        if docker-compose -f "$SCRIPT_DIR/docker-compose.yml" exec -T ollama curl -f http://localhost:11434/api/tags &> /dev/null; then
+    for i in {1..60}; do
+        if nc -z localhost 11434 2>/dev/null; then
             print_success "Ollama está disponible"
+            sleep 5  # Extra wait for Ollama to fully initialize
             break
         fi
-        if [ $i -eq 30 ]; then
+        if [ $i -eq 60 ]; then
             print_error "Timeout esperando a Ollama"
+            print_error "Verifica los logs: docker compose logs ollama"
             exit 1
         fi
         echo -n "."
-        sleep 2
+        sleep 1
     done
 }
 
@@ -89,20 +91,20 @@ start_services() {
 download_ollama_model() {
     MODEL=${1:-gemma2}
     print_info "Descargando modelo Ollama: $MODEL"
-    docker-compose -f "$SCRIPT_DIR/docker-compose.yml" exec -T ollama ollama pull "$MODEL"
+    docker compose -f "$SCRIPT_DIR/docker-compose.yml" exec -T ollama ollama pull "$MODEL"
     print_success "Modelo descargado"
 }
 
 # Ejecutar pipeline
 run_pipeline() {
     print_header "Ejecutando pipeline ADK 2.0..."
-    docker-compose -f "$SCRIPT_DIR/docker-compose.yml" exec adk-pipeline python main.py
+    docker compose -f "$SCRIPT_DIR/docker-compose.yml" exec adk-pipeline python main.py
 }
 
 # Ver logs
 view_logs() {
     print_header "Logs del Pipeline"
-    docker-compose -f "$SCRIPT_DIR/docker-compose.yml" logs -f adk-pipeline
+    docker compose -f "$SCRIPT_DIR/docker-compose.yml" logs -f adk-pipeline
 }
 
 # Ver dashboard Grafana
@@ -120,14 +122,14 @@ open_grafana() {
 # Limpiar servicios
 cleanup() {
     print_header "Deteniendo servicios..."
-    docker-compose -f "$SCRIPT_DIR/docker-compose.yml" down
+    docker compose -f "$SCRIPT_DIR/docker-compose.yml" down
     print_success "Servicios detenidos"
 }
 
 # Mostrar status
 show_status() {
     print_header "Status de Servicios"
-    docker-compose -f "$SCRIPT_DIR/docker-compose.yml" ps
+    docker compose -f "$SCRIPT_DIR/docker-compose.yml" ps
 }
 
 # Main

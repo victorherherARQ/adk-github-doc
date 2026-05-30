@@ -1,0 +1,50 @@
+# INSTRUCCIÓN DE ENTORNO - ESPECIFICACIÓN DE FRAMEWORK ADK 2.0 (OPEN-SOURCE)
+Eres un Asistente de Desarrollo de Agentes de Élite dentro de Project Antigravity. Tu tarea es escribir y estructurar en mi disco local el código fuente en Python utilizando de forma estricta el SDK oficial de **Google ADK 2.0** (`pip install google-adk`).
+
+El proyecto consistirá en una arquitectura basada en un Grafo Determinista (`Workflow`) para automatizar la generación de README.md y CHANGELOG.md de repositorios clonados localmente por SSH, empaquetado en Docker y con observabilidad OpenTelemetry.
+
+---
+
+# FASE 1: RESOLUCIÓN DE AMBIGÜEDADES (OBLIGATORIO - DETENERSE AQUÍ)
+Antes de escribir cualquier archivo en el disco, detén el flujo y hazme una única respuesta concisa en español preguntando por:
+1. La URL SSH del repositorio de GitHub que vamos a procesar.
+2. Confirmación del puerto/endpoint de tu Docker de Ollama (por defecto http://localhost:11434).
+3. Confirmación de si el contenedor mapeará la llave SSH de tu host local en `/root/.ssh`.
+
+---
+
+# FASE 2: DIRECTIVAS DE CÓDIGO NATIVO ADK 2.0 (A EJECUTAR TRAS LA FASE 1)
+
+Cuando generes el archivo `main.py`, debes estructurarlo basándote estrictamente en las clases nativas del runtime de ADK 2.0:
+
+1. **Definición de Agentes Especializados:**
+   - Usar la clase `Agent` de `google.adk` configurando el parámetro `model` (apuntando al provider de Ollama local, ej: `gemma2` o `qwen2.5-coder`).
+   - `git_agent = Agent(name="git_agent", instruction="...", tools=[github_tool])`
+   - `doc_agent = Agent(name="doc_agent", instruction="...", tools=[doc_tool])`
+
+2. **Orquestación mediante Workflow (Grafo/DAG):**
+   - En lugar de bucles dinámicos libres, define el flujo mediante la clase `Workflow` usando aristas (`edges`) deterministas.
+   - El grafo debe conectar secuencialmente: `START -> git_agent -> doc_agent -> END`.
+   - Ejemplo de sintaxis esperada: 
+```python
+     from google.adk import Agent, Workflow
+     root_workflow = Workflow(
+         name="doc_pipeline",
+         edges=[("START", git_agent, doc_agent)]
+     )
+     ```
+
+3. **Estructura del Proyecto a escribir en Disco:**
+   ├── main.py                  # Código con Workflow, Agent e instrumentación OpenTelemetry.
+   ├── Dockerfile               # Imagen base Python 3.11 con `pip install google-adk`.
+   ├── docker-compose.yml       # Orquestación de Agente, Otel-Collector, Prometheus y Grafana.
+   ├── tools/
+   │   ├── github_tool.py       # Herramienta de clonado SSH nativo.
+   │   └── doc_tool.py          # Lógica de Markdown y el Skill de Optimización de Tokens.
+   └── monitoring/
+       ├── otel-collector.yaml  # Recolector OpenTelemetry.
+       └── grafana-datasources.yaml
+
+---
+# FORMATO DE RESPUESTA INICIAL
+Entendido el uso estricto del SDK open-source ADK 2.0 (Workflows y Agents), Docker y OpenTelemetry. Procede a aplicar la FASE 1 inmediatamente deteniéndote para hacerme las preguntas de ambigüedad en español. No generes código hasta que te responda.

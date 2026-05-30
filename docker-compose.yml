@@ -1,0 +1,111 @@
+version: '3.8'
+
+services:
+  # ============ OLLAMA - LLM Local ============
+  ollama:
+    image: ollama/ollama:latest
+    container_name: adk-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0:11434
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - adk-network
+
+  # ============ OPENTELEMETRY COLLECTOR ============
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: adk-otel-collector
+    command: [
+      "--config=/etc/otel-collector.yaml"
+    ]
+    ports:
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP HTTP receiver
+      - "8888:8888"   # Prometheus metrics
+      - "8889:8889"   # Prometheus exporter
+    volumes:
+      - ./monitoring/otel-collector.yaml:/etc/otel-collector.yaml:ro
+    depends_on:
+      - prometheus
+    networks:
+      - adk-network
+
+  # ============ PROMETHEUS - Métricas ============
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: adk-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - adk-network
+
+  # ============ GRAFANA - Visualización ============
+  grafana:
+    image: grafana/grafana:latest
+    container_name: adk-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro
+    depends_on:
+      - prometheus
+    networks:
+      - adk-network
+
+  # ============ ADK PIPELINE ============
+  adk-pipeline:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: adk-pipeline
+    environment:
+      - GITHUB_REPO_SSH=git@github.com:victorherherARQ/poc-mongo-reactivo.git
+      - OLLAMA_ENDPOINT=http://ollama:11434
+      - OTEL_ENDPOINT=http://otel-collector:4317
+      - WORK_DIR=/app/work
+      - MODEL_NAME=gemma2
+    volumes:
+      # SSH: Mapeo de la clave SSH del host
+      - ~/.ssh:/root/.ssh:ro
+      # Volumen para repositorios clonados
+      - adk-work:/app/work
+      # Volumen para logs
+      - ./logs:/app/logs
+    depends_on:
+      - ollama
+      - otel-collector
+    networks:
+      - adk-network
+    restart: on-failure
+
+# ============ VOLÚMENES ============
+volumes:
+  ollama-data:
+  prometheus-data:
+  grafana-data:
+  adk-work:
+
+# ============ NETWORKS ============
+networks:
+  adk-network:
+    driver: bridge

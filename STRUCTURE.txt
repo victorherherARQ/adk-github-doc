@@ -1,0 +1,21 @@
+adk-github-doc/
+└── .env.example
+├── ARCHITECTURE.md
+├── DEPLOYMENT_GUIDE.md
+├── Dockerfile
+├── Makefile
+├── QUICK_START.md
+├── README.md
+├── STRUCTURE.txt
+├── SUMMARY.txt
+├── docker-compose.yml
+├── main.py
+│   ├── monitoring/grafana-datasources.yaml
+│   ├── monitoring/otel-collector.yaml
+│   ├── monitoring/prometheus.yaml
+│   ├── prompts/prompt inicial
+├── requirements.txt
+├── run.sh
+│   ├── tools/__init__.py
+│   ├── tools/doc_tool.py
+│   ├── tools/github_tool.py
